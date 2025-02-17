@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/AStarSearch.cpp
+/AStarSearch.h
+/QtWidgetsApplication1.qrc
+/QtWidgetsApplication1.ui
+/StdoutConsoleRedirect.cpp
+/StdoutConsoleRedirect.h
