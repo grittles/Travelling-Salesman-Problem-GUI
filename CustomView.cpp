@@ -18,7 +18,7 @@ CustomView::CustomView(QWidget* parent)
     // Set drag mode for the view to enable smooth panning
     setDragMode(QGraphicsView::NoDrag);  // We'll implement custom dragging
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);  // Zoom centered on mouse
-    setRenderHint(QPainter::Antialiasing, false);  // disable antialiasing
+    setRenderHint(QPainter::Antialiasing, false);  // disable antialiasing cause it makes stuff ugly
 
     //resetCanvas(width, height, bSize);
 
@@ -61,12 +61,13 @@ void CustomView::PlaceBlock(int x, int y, int type) {
     
     if (existingItem != nullptr) { // update item
         
+        if (existingItem->_type == type) {
+            return;
+        }
         //QString text = QString("Pixel already exists there, overwriting.");
         //QtWidgetsApplication1::getInstance()->WriteConsole(text);
 
         //CustomRectItem* customItem = dynamic_cast<CustomRectItem*>(existingItem);
-
-        existingItem->updateType(type);
 
         if (type == 3) { // should really have enum'd this
             if (!(origin == nullptr)) {
@@ -75,6 +76,8 @@ void CustomView::PlaceBlock(int x, int y, int type) {
             }
             origin = existingItem;
         }
+
+        existingItem->updateType(type);
     }
     else { // place item (redundant except for initiating the scene)
         CustomRectItem* block = new CustomRectItem(x, y, _blockSize, _blockSize, type);
@@ -230,12 +233,18 @@ void CustomView::resetCanvas(int width, int height, int blockSize) {
     m_itemsHash.clear();
     scene()->clear(); // Clear existing items if necessary
 
+    origin = nullptr;
+
     for (int x = 0; x < width; x += blockSize) {
         for (int y = 0; y < height; y += blockSize) {
             PlaceBlock(x, y, 1);
         }
     }
 
+    if (gridPointer != nullptr) {
+        gridPointer->fullResetPath();
+    }
+    
     resumeInput();
 }
 

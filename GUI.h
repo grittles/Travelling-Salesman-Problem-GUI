@@ -62,6 +62,7 @@ private:
     QPushButton* syncCanvasButton;
     QPushButton* printGridButton;
     QPushButton* tracePathButton;
+    QPushButton* traceAllPathsButton;
 
     QLineEdit* minSizeEdit;
     QLineEdit* maxSizeEdit;
@@ -93,5 +94,6 @@ private slots:
     void syncCanvas();
     void printGrid();
     void tracePath();
+    void traceAllPaths();
     
 };

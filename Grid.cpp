@@ -66,9 +66,11 @@ void Grid::setCell(int x, int y, int newtype) { // couldn't get this to work as 
         // if we're adding a new origin
         if (newtype == 3) {
             if (origin != nullptr) {
+                nodes.erase(std::remove(nodes.begin(), nodes.end(), origin), nodes.end());
                 origin->type = 1; // replace old type as 1 (free)
             }
             origin = oldcell; // replace the pointer of origin with oldcell pointer
+            nodes.push_back(origin);
 
         } // this won't execute if (oldtype == 2) and newtype == 2 because we checked for the same type earlier.
         else if (newtype == 2) {
@@ -105,8 +107,6 @@ void Grid::resizeGrid(int x, int y) {
     _width = x;
     _height = y;
 }
-
-
 
 uint8_t Grid::getNeighbors(int x, int y, Cell* tempcell) {
     
@@ -278,12 +278,12 @@ std::vector<Cell*> Grid::TracePath(int x, int y, int targetx, int targety) // re
 
     start = nullptr;
     finish = nullptr;
-    resetPath(); // we're done with this path so reset everything
+    //resetPathingData(); // we're done with this path so reset everything
 
     return path;
 }
 
-void Grid::resetPath() {
+void Grid::resetPathingData() {
     for (auto& row : cells) {
         for (auto& cell : row) {
             if (cell.visiting == true) {
@@ -300,4 +300,69 @@ void Grid::fullResetPath()
             cell.resetTraversalProperties(true);
         }
     }
+}
+
+void Grid::addPath(const QPoint& start, const QPoint& finish, const std::vector<Cell*>& path)
+{
+
+    if (pathMap.contains(start)) {
+        QHash<QPoint, PathInfo*>& innerHash = pathMap[start];
+        if (innerHash.contains(finish)) {
+            return; // already here, cancel
+        }
+    }
+
+    float cost = path.back()->f;  // Assuming path is non-empty
+    PathInfo* _path = new PathInfo(cost, path);
+    std::vector<Cell*> reversedPath = path;
+    std::reverse(reversedPath.begin(), reversedPath.end());
+    PathInfo* _pathReversed = new PathInfo(cost, reversedPath);
+
+    pathMap[start][finish] = _path;
+    pathMap[finish][start] = _pathReversed; // Should be _pathReversed instead of _path
+}
+
+PathInfo* Grid::getPath(const QPoint& start, const QPoint& finish)
+{
+    // Check if the start point exists in the outer hash
+    if (pathMap.contains(start)) {
+        // Check if the finish point exists in the inner hash for the given start point
+        QHash<QPoint, PathInfo*>& innerHash = pathMap[start];
+        if (innerHash.contains(finish)) {
+            return innerHash[finish];
+        }
+    }
+    return nullptr;
+}
+
+void Grid::addAllPaths()
+{   
+    /*if (origin != nullptr && std::find(nodes.begin(), nodes.end(), origin) == nodes.end()) {
+        nodes.push_back(origin);
+    }*/
+
+    
+    // Loop through each element in the vector
+    for (size_t start = 0; start < nodes.size(); ++start) {
+
+        // Print the starting number followed by a dash
+        Cell* temp_start = nodes[start];
+
+        // Loop to print the remaining numbers after the current start
+        for (size_t end = start + 1; end < nodes.size(); ++end) {
+            Cell* temp_end = nodes[end];
+
+            // mutex code just in case we get some desync issues
+            // mutex.lock();   // Lock the mutex
+            std::vector<Cell*> path = TracePath(temp_start->x, temp_start->y, temp_end->x, temp_end->y);
+            // mutex.unlock(); // Unlock the mutex
+            QPoint startP = QPoint(temp_start->x, temp_start->y);
+            QPoint endP = QPoint(temp_end->x, temp_end->y);
+            addPath(startP, endP, path);
+            resetPathingData(); // we're done with this path so reset everything and go again
+        }
+    }
+
+    //auto it = std::remove(nodes.begin(), nodes.end(), origin);
+    //nodes.erase(it, nodes.end());
 }

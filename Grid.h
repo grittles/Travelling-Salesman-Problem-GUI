@@ -4,6 +4,8 @@
 
 #include <vector>
 #include <QString>
+#include <QtCore/QPoint.h>
+#include <QtCore/QHash.h>
 #include <queue>
 
 struct Cell {
@@ -65,6 +67,15 @@ struct Compare {
 
 typedef std::priority_queue<CellEntry, std::vector<CellEntry>, Compare> Queue;
 
+// PathInfo struct we use to store distance and the actual path
+struct PathInfo {
+    float distance = 0;
+    std::vector<Cell*> path;
+
+    PathInfo() = default;  // Default constructor
+    PathInfo(float d, std::vector<Cell*> p) : distance(d), path(p) {}
+};
+
 class Grid {
 private:
     int _width;
@@ -72,6 +83,7 @@ private:
 
     std::vector<std::vector<Cell>> cells;  // 2D vector of Cells
     std::vector<Cell*> nodes;  // vector of Cell pointers; this one is our node network
+    QHash<QPoint, QHash<QPoint, PathInfo*>> pathMap;
 
     // use these offsets to find neighbors
     std::vector<std::pair<int, int>> offsets = {
@@ -79,6 +91,11 @@ private:
     }; // Order: N(0), NE(1), E(2), SE(3), S(4), SW(5), W(6), NW(7)
 
 public:
+
+    std::vector<Cell*>* getNodes() {
+        return &nodes;
+    }
+    
     std::vector<std::vector<Cell>>* getGrid() {
         return &cells;
     }
@@ -112,8 +129,14 @@ public:
     uint8_t getNeighbors(int x, int y, Cell* tempcell = nullptr);
     std::vector<Cell*> getAdjacentCells(Cell* point = nullptr);
     std::vector<Cell*> TracePath(int x, int y, int targetx, int targety);
-    void resetPath();
+    void resetPathingData();
     void fullResetPath();
+
+    void addPath(const QPoint& start, const QPoint& finish, const std::vector<Cell*>& path);
+
+    PathInfo* getPath(const QPoint& start, const QPoint& finish);
+
+    void addAllPaths();
 
 public slots:
     void resizeGrid(int x, int y);
@@ -122,5 +145,4 @@ public slots:
     Cell& getCell(int x, int y);
 
 };
-
 #endif // GRID_H

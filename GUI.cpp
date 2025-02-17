@@ -102,6 +102,19 @@ void QtWidgetsApplication1::tracePath()
     syncGrid();
 }
 
+void QtWidgetsApplication1::traceAllPaths()
+{
+    syncCanvas();
+    // if I were to redo this in C rather than C++ I'd probably trace my path as a linked list
+    // I planned on doing the GUI in C++ and doing the pathing and algorithms in C. Kinda off
+    // my original plan at this point.
+    
+    //QString text = myGrid->PrintPath(path);
+    //WriteConsole(text);
+    myGrid->addAllPaths();
+    syncGrid();
+}
+
 
 void QtWidgetsApplication1::WriteConsole(QString string)
 {
@@ -208,6 +221,9 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     tracePathButton = new QPushButton("Trace Path");
     rightLayout->addWidget(tracePathButton);
 
+    traceAllPathsButton = new QPushButton("Trace All Paths");
+    rightLayout->addWidget(traceAllPathsButton);
+
     topSplitter->addWidget(rightPanel);
 
     // 3. Console at the Bottom
@@ -229,6 +245,7 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     connect(syncCanvasButton, &QPushButton::clicked, this, &QtWidgetsApplication1::syncCanvas);
     connect(printGridButton, &QPushButton::clicked, this, &QtWidgetsApplication1::printGrid);
     connect(tracePathButton, &QPushButton::clicked, this, &QtWidgetsApplication1::tracePath);
+    connect(traceAllPathsButton, &QPushButton::clicked, this, &QtWidgetsApplication1::traceAllPaths);
 
     // place initial blocks
     InitCanvas();
