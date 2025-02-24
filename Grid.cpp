@@ -61,6 +61,12 @@ void Grid::setCell(int x, int y, int newtype) { // couldn't get this to work as 
             nodes.erase(std::remove(nodes.begin(), nodes.end(), oldcell), nodes.end());
         }
 
+        if ((oldtype == 3)) {
+            // erase-remove idiom
+            nodes.erase(std::remove(nodes.begin(), nodes.end(), origin), nodes.end());
+            origin = nullptr;
+        }
+
         // if we're adding a new origin
         if (newtype == 3) {
             if (origin != nullptr) {
@@ -138,8 +144,6 @@ void Grid::clearPathMap() {
     // Clear the outer QHash
     pathMap.clear();
 }
-
-
 
 uint8_t Grid::getNeighbors(int x, int y, Cell* tempcell) {
     
@@ -413,6 +417,8 @@ void Grid::addAllPaths()
 
 std::pair<int, std::vector<int>> Grid::TSPSolve_heldKarp() // this shouldn't be void later, make it return the path.
 {
+    // Held-Karp algorithm is useful because you set predecessors which lets you create a TSP from a specific point.
+    // We pick an "arbitrary" point as zero and we rotate it around later.
     // NOT REALLY MY ORIGINAL CODE.
     // Credit to this page: https://compgeek.co.in/held-karp-algorithm-for-tsp/#:~:text=The%20algorithm%20uses%20a%20dynamic,(n%20*%202n).
     addAllPaths(); // this initializes the TSP Map and the all the paths
@@ -441,8 +447,8 @@ std::pair<int, std::vector<int>> Grid::TSPSolve_heldKarp() // this shouldn't be 
                         int newMask = mask | (1 << v);
                         double newCost = dp[mask][u] + tspMap[u][v];
                         if (dp[newMask][v] == -1 || newCost < dp[newMask][v]) {
-                            dp[newMask][v] = newCost;
-                            pred[newMask][v] = u;
+                            dp[newMask][v] = newCost;   // this is our new minimum cost to this combination of points
+                            pred[newMask][v] = u;       // set parent / predecessor
                         }
                     }
                 }
