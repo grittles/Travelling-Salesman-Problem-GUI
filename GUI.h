@@ -18,6 +18,8 @@
 #include "CustomView.h"
 #include <QLineEdit>
 
+#include <chrono>  // Include the chrono library
+
 class QtWidgetsApplication1 : public QMainWindow
 {
     Q_OBJECT

@@ -109,6 +109,9 @@ void QtWidgetsApplication1::traceAllPaths()
     
     //QString text = myGrid->PrintPath(path);
     //WriteConsole(text);
+
+    auto start = std::chrono::high_resolution_clock::now();
+
     myGrid->addAllPaths();
 
     auto result = myGrid->TSPSolve_heldKarp();
@@ -140,6 +143,14 @@ void QtWidgetsApplication1::traceAllPaths()
     }
 
     auto c = myGrid->origin;
+
+    QString text;
+
+    if (c != nullptr) {
+        text = QString("origin: [%1, %2]").arg(c->x).arg(c->y);
+        WriteConsole(text);
+    }
+
     auto it = std::find(finalpath.begin(), finalpath.end(), c);
     if ((it != finalpath.begin()) && (it != finalpath.end())) {
         finalpath.pop_back(); // Remove the last element
@@ -149,13 +160,15 @@ void QtWidgetsApplication1::traceAllPaths()
         finalpath.push_back(c);
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-    QString text = myGrid->PrintPath(finalpath);
-
+    text = myGrid->PrintPath(finalpath);
     WriteConsole(text);
 
-    text = QString("origin: [%1, %2]").arg(c->x).arg(c->y);
+    text = QString("Time taken to Execute: %1 ms").arg(duration);
     WriteConsole(text);
+
 
     syncGrid();
 
