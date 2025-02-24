@@ -142,12 +142,10 @@ void QtWidgetsApplication1::traceAllPaths()
     auto c = myGrid->origin;
     auto it = std::find(finalpath.begin(), finalpath.end(), c);
     if ((it != finalpath.begin()) && (it != finalpath.end())) {
-        // Rotate so that '7' is at the start of the vector
         finalpath.pop_back(); // Remove the last element
 
         std::rotate(finalpath.begin(), it, finalpath.end());
 
-        // Add '7' again at the end to satisfy the condition
         finalpath.push_back(c);
     }
 
