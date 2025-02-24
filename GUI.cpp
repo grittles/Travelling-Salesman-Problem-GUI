@@ -32,8 +32,6 @@ void QtWidgetsApplication1::deleteObject()
     WriteConsole(word);
 }
 
-
-
 void QtWidgetsApplication1::ResizeCanvas()
 {
     bool okMin, okMax;
@@ -112,7 +110,57 @@ void QtWidgetsApplication1::traceAllPaths()
     //QString text = myGrid->PrintPath(path);
     //WriteConsole(text);
     myGrid->addAllPaths();
+
+    auto result = myGrid->TSPSolve_heldKarp();
+    auto path = result.second;
+
+    std::vector<Cell*> finalpath;
+    std::vector<Cell*>* nodes = myGrid->getNodes();
+    for (int city : path) {
+        
+        finalpath.push_back((*nodes)[city]);
+
+    }
+
+    for (int i = 0; i < finalpath.size() -1; i++) {
+        QPoint start = QPoint(finalpath[i]->x, finalpath[i]->y);
+        QPoint finish = QPoint(finalpath[i+1]->x, finalpath[i+1]->y);
+
+        PathInfo* pathInfo = myGrid->getPath(start, finish);
+        std::vector<Cell*> path = pathInfo->path;
+
+
+        for (Cell* c : path) {
+            if (c->type == 1) { // if free
+                c->type = 4; // change to traverse type ( this is for debug only, remove later)
+            }
+            //myGrid->setCell(c->x,c->y, );
+        }
+
+    }
+
+    auto c = myGrid->origin;
+    auto it = std::find(finalpath.begin(), finalpath.end(), c);
+    if ((it != finalpath.begin()) && (it != finalpath.end())) {
+        // Rotate so that '7' is at the start of the vector
+        finalpath.pop_back(); // Remove the last element
+
+        std::rotate(finalpath.begin(), it, finalpath.end());
+
+        // Add '7' again at the end to satisfy the condition
+        finalpath.push_back(c);
+    }
+
+
+    QString text = myGrid->PrintPath(finalpath);
+
+    WriteConsole(text);
+
+    text = QString("origin: [%1, %2]").arg(c->x).arg(c->y);
+    WriteConsole(text);
+
     syncGrid();
+
 }
 
 

@@ -34,9 +34,6 @@ public:
     int sceneHeight;
     int bSize = 10;
     Grid* myGrid = nullptr;
-protected:
-    
-
 
 private:
     Ui::QtWidgetsApplication1Class ui;

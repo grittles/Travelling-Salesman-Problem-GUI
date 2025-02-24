@@ -3,6 +3,7 @@
 #define GRID_H
 
 #include <vector>
+#include <map>
 #include <QString>
 #include <QtCore/QPoint.h>
 #include <QtCore/QHash.h>
@@ -82,6 +83,9 @@ private:
     int _height;
 
     std::vector<std::vector<Cell>> cells;  // 2D vector of Cells
+
+    std::vector<std::vector<float>> tspMap;  // 2D vector of floats
+
     std::vector<Cell*> nodes;  // vector of Cell pointers; this one is our node network
     QHash<QPoint, QHash<QPoint, PathInfo*>> pathMap;
 
@@ -89,6 +93,8 @@ private:
     std::vector<std::pair<int, int>> offsets = {
         {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}
     }; // Order: N(0), NE(1), E(2), SE(3), S(4), SW(5), W(6), NW(7)
+
+    
 
 public:
 
@@ -114,6 +120,16 @@ public:
         }
     }
 
+    int min(int a, int b) {
+        // If either number is -1, return the other number (which is not -1)
+        if (a == -1) return b; // If a is -1 (infinity), return b
+        else if (b == -1) return a; // If b is -1 (infinity), return a
+
+        // If neither is -1, return the smaller number
+        return (a < b) ? a : b;
+    }
+
+
     // Get grid dimensions
     int getWidth() const { return _width; }
     int getHeight() const { return _height; }
@@ -138,8 +154,14 @@ public:
 
     void addAllPaths();
 
+    std::pair<int, std::vector<int>>  TSPSolve_heldKarp();
+
 public slots:
     void resizeGrid(int x, int y);
+
+    void resizeTSPMap(int x);
+
+    void clearPathMap();
     
     void setCell(int x, int y, int newtype);
     Cell& getCell(int x, int y);
