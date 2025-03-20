@@ -146,13 +146,17 @@ void CustomView::resumeInput() {
     scene()->update(); // Manually update the scene once after all changes
 }
 
-void CustomView::resizeCanvas() {
+void CustomView::resizeCanvas(int gridToCanvas) {
     // this is meant to be called inside of ResizeCanvasArgs in GUI.cpp
     pauseInput();
 
     QRectF sceneRect = this->sceneRect(); // Get the scene rectangle
+
     removeItemsOutsideRect(sceneRect);
     addItemsInRect(sceneRect);
+
+    if (gridToCanvas == false) syncCanvasToGrid();
+    
 
     resumeInput();
 }
@@ -201,16 +205,16 @@ void CustomView::syncGridToCanvas()
     int blocksize = _blockSize;
 
     // do reverse of sync canvas to grid and upscale the dimensions
-    int width = gridPointer->getWidth() * blocksize;
-    int height = gridPointer->getHeight() * blocksize;
+    int width = gridPointer->getWidth();
+    int height = gridPointer->getHeight();
 
     QRectF sceneRect = this->sceneRect();
     int sceneWidth = roundToNearestMultiple(sceneRect.right() + 1, blocksize);
     int sceneHeight = roundToNearestMultiple(sceneRect.bottom() + 1, blocksize);
 
     // this should not happen
-    if (!(sceneWidth == width && sceneHeight == height))
-        QtWidgetsApplication1::getInstance()->ResizeCanvasArgs(width, height); // resize to grid size 
+    if (!(sceneWidth == width*blocksize && sceneHeight == height*blocksize))
+        QtWidgetsApplication1::getInstance()->ResizeCanvasArgs(width, height, true); // resize to grid size 
 
     std::vector<std::vector<Cell>>* gridCells = gridPointer->getGrid();
 

@@ -47,7 +47,7 @@ public:
 
 public slots:
     void resetCanvas(int width, int height, int blockSize);
-    void resizeCanvas();
+    void resizeCanvas(int gridToCanvas = false);
 
     void syncCanvasToGrid(); // is this really necessary?
     void syncGridToCanvas();

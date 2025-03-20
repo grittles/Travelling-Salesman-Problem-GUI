@@ -367,3 +367,5 @@ FodyWeavers.xsd
 /QtWidgetsApplication1.ui
 /StdoutConsoleRedirect.cpp
 /StdoutConsoleRedirect.h
+/QtWidgetsApplication1.vcxproj
+/QtWidgetsApplication1.vcxproj.filters

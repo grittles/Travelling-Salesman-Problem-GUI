@@ -36,6 +36,8 @@ public:
     int sceneHeight;
     int bSize = 10;
     Grid* myGrid = nullptr;
+    QWidget* _parent = nullptr;
+
 
 private:
     Ui::QtWidgetsApplication1Class ui;
@@ -53,8 +55,8 @@ private:
     QHBoxLayout* mainSplitLayout;
 
     QComboBox* dropdown;
-    QPushButton* addButton;
-    QPushButton* deleteButton;
+    QPushButton* saveButton;
+    QPushButton* openButton;
     QPushButton* resizeButton;
     QPushButton* resetButton;
     QPushButton* syncGridButton;
@@ -62,6 +64,7 @@ private:
     QPushButton* printGridButton;
     QPushButton* tracePathButton;
     QPushButton* traceAllPathsButton;
+    QPushButton* traceGreedyPathButton;
 
     QLineEdit* minSizeEdit;
     QLineEdit* maxSizeEdit;
@@ -73,6 +76,7 @@ private:
 
     // Static instance pointer
     static QtWidgetsApplication1* instance;
+    int selectedDropType = 0;
 
 signals:
     void requestCanvasInitialization(int width, int height, int blockSize);
@@ -80,19 +84,20 @@ signals:
 public slots:
     void WriteConsole(QString string);
     int getType();
-    void ResizeCanvas();
-    void ResizeCanvasArgs(int minsize, int maxsize);
+    void ResizeCanvas(int gridToCanvas);
+    void ResizeCanvasArgs(int minsize, int maxsize, int gridToCanvas);
 
 private slots:
     void handleDropdownChange(int index);
 
-    void addObject();
-    void deleteObject();
+    void saveToFile();
+    void openFromFile();
     void InitCanvas();
     void syncGrid();
     void syncCanvas();
     void printGrid();
     void tracePath();
     void traceAllPaths();
+    void traceGreedyPath();
     
 };

@@ -1,8 +1,8 @@
 #include "GUI.h"
 
-int selectedDropType = 0;
 
-// Define the static instance (This is required for linking to work)
+
+// Define the static instance (This is for linking to work)
 QtWidgetsApplication1* QtWidgetsApplication1::instance = nullptr;
 
 void QtWidgetsApplication1::handleDropdownChange(int index)
@@ -19,20 +19,26 @@ int QtWidgetsApplication1::getType()
     return selectedDropType;
 }
 
-void QtWidgetsApplication1::addObject()
+void QtWidgetsApplication1::saveToFile()
 {
 
-    QString word = QString("Adding an object");
+    QString word = QString("Attempting to Save File");
     WriteConsole(word);
+
+    myGrid->saveFile(_parent);
 }
 
-void QtWidgetsApplication1::deleteObject()
+void QtWidgetsApplication1::openFromFile()
 {
-    QString word = QString("Deleting an object");
+    QString word = QString("Opening File");
     WriteConsole(word);
+
+    myGrid->openFile(_parent);
+
+    syncGrid();
 }
 
-void QtWidgetsApplication1::ResizeCanvas()
+void QtWidgetsApplication1::ResizeCanvas(int gridToCanvas)
 {
     bool okMin, okMax;
 
@@ -41,14 +47,14 @@ void QtWidgetsApplication1::ResizeCanvas()
 
     // this could cause some real problems if this bool check fails, beware.
     if (okMin && okMax) {
-        ResizeCanvasArgs(minSize, maxSize);
+        ResizeCanvasArgs(minSize, maxSize, gridToCanvas);
     }
     else {
         WriteConsole("Invalid input for resizing");
     }
 }
 
-void QtWidgetsApplication1::ResizeCanvasArgs(int minSize = -1, int maxSize = -1)
+void QtWidgetsApplication1::ResizeCanvasArgs(int minSize = -1, int maxSize = -1, int gridToCanvas = false)
 {
 
     // minSize = std::round(static_cast<double>(minSize) / 10)* 10; // round to nearest 10.
@@ -61,7 +67,7 @@ void QtWidgetsApplication1::ResizeCanvasArgs(int minSize = -1, int maxSize = -1)
     sceneWidth = minSize*10;
     sceneHeight = maxSize*10;
 
-    mapView->resizeCanvas();
+    mapView->resizeCanvas(gridToCanvas);
 
     QString resizeMsg = QString("Canvas resized to min: %1, max: %2").arg(minSize).arg(maxSize);
     WriteConsole(resizeMsg);
@@ -94,9 +100,35 @@ void QtWidgetsApplication1::tracePath()
     // if I were to redo this in C rather than C++ I'd probably trace my path as a linked list
     // I planned on doing the GUI in C++ and doing the pathing and algorithms in C. Kinda off
     // my original plan at this point.
-    std::vector<Cell*> path = myGrid->TracePath(0,0,5,8);
-    QString text = myGrid->PrintPath(path);
+
+    //QString text = myGrid->PrintPath(path);
+    //WriteConsole(text);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    auto result = myGrid->TSPSolve_heldKarp();
+    int distance = result.first;
+
+    auto end = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    QString text;
+
+    text = QString("Time taken to Execute: %1 ms").arg(duration);
     WriteConsole(text);
+
+    auto c = myGrid->origin;
+
+    if (c != nullptr) {
+        text = QString("origin: [%1, %2]").arg(c->x).arg(c->y);
+        WriteConsole(text);
+    }
+
+    text = myGrid->PrintPath(result.second);
+    WriteConsole(text);
+
+    text = QString("Total Distance: %1").arg(distance);
+    WriteConsole(text);
+
     syncGrid();
 }
 
@@ -111,69 +143,67 @@ void QtWidgetsApplication1::traceAllPaths()
     //WriteConsole(text);
 
     auto start = std::chrono::high_resolution_clock::now();
+    auto result = myGrid->TSPSolve_LK();
+    auto end = std::chrono::high_resolution_clock::now();
 
-    myGrid->addAllPaths();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    QString text;
 
-    auto result = myGrid->TSPSolve_heldKarp();
-    auto path = result.second;
-
-    std::vector<Cell*> finalpath;
-    std::vector<Cell*>* nodes = myGrid->getNodes();
-    for (int city : path) {
-        
-        finalpath.push_back((*nodes)[city]);
-
-    }
-
-    for (int i = 0; i < finalpath.size() -1; i++) {
-        QPoint start = QPoint(finalpath[i]->x, finalpath[i]->y);
-        QPoint finish = QPoint(finalpath[i+1]->x, finalpath[i+1]->y);
-
-        PathInfo* pathInfo = myGrid->getPath(start, finish);
-        std::vector<Cell*> path = pathInfo->path;
-
-
-        for (Cell* c : path) {
-            if (c->type == 1) { // if free
-                c->type = 4; // change to traverse type ( this is for debug only, remove later)
-            }
-            //myGrid->setCell(c->x,c->y, );
-        }
-
-    }
+    text = QString("Time taken to Execute: %1 ms").arg(duration);
+    WriteConsole(text);
 
     auto c = myGrid->origin;
-
-    QString text;
 
     if (c != nullptr) {
         text = QString("origin: [%1, %2]").arg(c->x).arg(c->y);
         WriteConsole(text);
     }
 
-    auto it = std::find(finalpath.begin(), finalpath.end(), c);
-    if ((it != finalpath.begin()) && (it != finalpath.end())) {
-        finalpath.pop_back(); // Remove the last element
-
-        std::rotate(finalpath.begin(), it, finalpath.end());
-
-        finalpath.push_back(c);
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-    text = myGrid->PrintPath(finalpath);
+    text = myGrid->PrintPath(result.second);
     WriteConsole(text);
+
+    text = QString("Total Distance: %1").arg(result.first);
+    WriteConsole(text);
+
+    syncGrid();
+}
+
+
+void QtWidgetsApplication1::traceGreedyPath()
+{
+    syncCanvas();
+    // if I were to redo this in C rather than C++ I'd probably trace my path as a linked list
+    // I planned on doing the GUI in C++ and doing the pathing and algorithms in C. Kinda off
+    // my original plan at this point.
+
+    //QString text = myGrid->PrintPath(path);
+    //WriteConsole(text);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    auto result = myGrid->TSPSolve_Greedy();
+    auto end = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    QString text;
 
     text = QString("Time taken to Execute: %1 ms").arg(duration);
     WriteConsole(text);
 
+    auto c = myGrid->origin;
+
+    if (c != nullptr) {
+        text = QString("origin: [%1, %2]").arg(c->x).arg(c->y);
+        WriteConsole(text);
+    }
+
+    text = myGrid->PrintPath(result.second);
+    WriteConsole(text);
+
+    text = QString("Total Distance: %1").arg(result.first);
+    WriteConsole(text);
 
     syncGrid();
-
 }
-
 
 void QtWidgetsApplication1::WriteConsole(QString string)
 {
@@ -198,6 +228,7 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     ui.setupUi(this);
 
     instance = this;
+    _parent = parent;
 
     // Central widget and main layout
     centralWidget = new QWidget(this);
@@ -216,22 +247,11 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     //mapView->setGUIParent(&this);
     mapView->setScene(mapScene);
     mapView->setRenderHint(QPainter::Antialiasing);
-    mapScene->setSceneRect(0, 0, 800, 600);
-
-    //viewWidth = mapView->width();
-    //viewHeight = mapView->height();
-
-    //double scaleX = 2;
-    //double scaleY = 2;
-
-    //mapView->scale(scaleX, scaleY);
+    mapScene->setSceneRect(0, 0, 800, 600); // default is 800x600 or 80x60
 
     QRectF sceneRect = mapScene->sceneRect(); // Get the scene rectangle
     sceneWidth = static_cast<int>(std::round(sceneRect.width()));
     sceneHeight = static_cast<int>(std::round(sceneRect.height()));
-
-
-    topSplitter->addWidget(mapView);
 
     topSplitter->addWidget(mapView);
 
@@ -244,15 +264,9 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     dropdown->addItem("Free Block"); // type 1
     dropdown->addItem("Node Block"); // type 2
     dropdown->addItem("Origin Block"); // type 3
-    dropdown->addItem("Path Block (Not used)"); // type 4
+    //dropdown->addItem("Path Block (Not used)"); // type 4
     
     rightLayout->addWidget(dropdown);
-
-    addButton = new QPushButton("Add Object");
-    rightLayout->addWidget(addButton);
-
-    deleteButton = new QPushButton("Delete Object");
-    rightLayout->addWidget(deleteButton);
 
     resizeButton = new QPushButton("Resize Grid");
     rightLayout->addWidget(resizeButton);
@@ -277,11 +291,21 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     printGridButton = new QPushButton("Print Grid");
     rightLayout->addWidget(printGridButton);
 
-    tracePathButton = new QPushButton("Trace Path");
+    tracePathButton = new QPushButton("Trace Path (Brute Force Solve)");
     rightLayout->addWidget(tracePathButton);
 
-    traceAllPathsButton = new QPushButton("Trace All Paths");
+    traceAllPathsButton = new QPushButton("Trace All Paths (LK)");
     rightLayout->addWidget(traceAllPathsButton);
+
+    traceGreedyPathButton = new QPushButton("Trace Greedy Path");
+    rightLayout->addWidget(traceGreedyPathButton);
+
+    saveButton = new QPushButton("Save Grid Data");
+    rightLayout->addWidget(saveButton);
+
+    openButton = new QPushButton("Open Grid Data");
+    rightLayout->addWidget(openButton);
+
 
     topSplitter->addWidget(rightPanel);
 
@@ -296,20 +320,23 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
 
     // Signals and Slots
     connect(dropdown, &QComboBox::currentIndexChanged, this, &QtWidgetsApplication1::handleDropdownChange);
-    connect(addButton, &QPushButton::clicked, this, &QtWidgetsApplication1::addObject);
-    connect(deleteButton, &QPushButton::clicked, this, &QtWidgetsApplication1::deleteObject);
+
     connect(resizeButton, &QPushButton::clicked, this, &QtWidgetsApplication1::ResizeCanvas);
     connect(resetButton, &QPushButton::clicked, this, &QtWidgetsApplication1::InitCanvas);
     connect(syncGridButton, &QPushButton::clicked, this, &QtWidgetsApplication1::syncGrid);
     connect(syncCanvasButton, &QPushButton::clicked, this, &QtWidgetsApplication1::syncCanvas);
     connect(printGridButton, &QPushButton::clicked, this, &QtWidgetsApplication1::printGrid);
     connect(tracePathButton, &QPushButton::clicked, this, &QtWidgetsApplication1::tracePath);
+    connect(traceGreedyPathButton, &QPushButton::clicked, this, &QtWidgetsApplication1::traceGreedyPath);
     connect(traceAllPathsButton, &QPushButton::clicked, this, &QtWidgetsApplication1::traceAllPaths);
+
+    connect(saveButton, &QPushButton::clicked, this, &QtWidgetsApplication1::saveToFile);
+    connect(openButton, &QPushButton::clicked, this, &QtWidgetsApplication1::openFromFile);
 
     // place initial blocks
     InitCanvas();
 
-    myGrid = new Grid(10, 10);
+    myGrid = new Grid(sceneWidth/10, sceneHeight/10);
     mapView->getGrid();
 
     //myGrid->setCell(2, 2, 0);

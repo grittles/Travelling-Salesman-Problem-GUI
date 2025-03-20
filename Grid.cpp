@@ -1,15 +1,33 @@
 // Grid.cpp
 #include "Grid.h"
 
-// find h score. Recall final score f = g + h
-float calculate_h_score(const int x1, const int y1, const int x2, const int y2)
-{
-	float distance_x = abs(x1 - x2);
-	float distance_y = abs(y1 - y2);
 
-	//This is the minimal distance it takes to move from cell_0 to cell_1 if we move in 8 directions and ignore every obstacle.
-	//I don't recommend using other types of distance calculations because then Astar doesn't find the shortest path.
-	return std::max(distance_x, distance_y) + std::min(distance_x, distance_y) * (sqrt(2) - 1);
+// Calculate the perpendicular distance from point C(x3, y3) to the line formed by A(x1, y1) and B(x2, y2)
+double calculate_d_score(int x1, int y1, int x2, int y2, int x3, int y3)
+{
+    // Compute the area of triangle ABC using the determinant method
+    double area = fabs(x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) / 2.0;
+
+    // Calculate the magnitude of the vector AB
+    double magnitudeAB = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+
+    // Compute the perpendicular distance from point C to line AB
+    double distance = (2 * area) / magnitudeAB;
+
+    return distance;
+}
+
+// find h score. Recall final score f = g + h
+// old version SUCKED so we use euclidean instead.
+double calculate_h_score(const int x1, const int y1, const int x2, const int y2)
+{
+    double distance_x = abs(x1 - x2);
+    double distance_y = abs(y1 - y2);
+
+    //This is the minimal distance it takes to move from cell_0 to cell_1 if we move in 8 directions and ignore every obstacle.
+    //I don't recommend using other types of distance calculations because then Astar doesn't find the shortest path.
+    //return std::max(distance_x, distance_y) + std::min(distance_x, distance_y) * (sqrt(2) - 1);
+    return sqrt(distance_x * distance_x + distance_y * distance_y);
 }
 
 QString Grid::printGrid() const {
@@ -24,19 +42,112 @@ QString Grid::printGrid() const {
     return output;
 }
 
-
 QString Grid::PrintPath(std::vector<Cell*> cells) const {
     QString output;  // Use QString
     int sz = cells.size();
     if (sz == 0) {
         return QString("Could not produce a path");
     }
-    for (size_t i = 0; i < sz -1; ++i) {
+    for (size_t i = 0; i < sz - 1; ++i) {
         output += QString("[%0,%1]->").arg(cells[i]->x).arg(cells[i]->y);
     }
-    output += QString("[%0,%1]\n").arg(cells[sz - 1]->x).arg(cells[sz -1]->y);
+    output += QString("[%0,%1]\n").arg(cells[sz - 1]->x).arg(cells[sz - 1]->y);
 
     return output;
+}
+
+bool Grid::saveFile(QWidget* parent) const {
+    char* b = (char*)malloc((_width * (_height + 1)) + 1); // +1 for null terminator and +1 for newline char on every line
+    if (b == nullptr) return false; // malloc failed
+    
+    int strsize = sprintf(b, "%d %d\n", _width, _height); // returns the number of characters written, not including null terminator
+
+    char* p = b + strsize;
+
+    for (int i = 0; i < _height; i++) {
+        for (int j = 0; j < _width; j++) {
+            *p = '0' + cells[i][j].type; // types range from 0-4 so this will always be valid
+            p++;
+            strsize += 1;
+        }
+        *p = '\n'; // add newline after every row
+        p++;
+        strsize += 1;
+    }
+    *p = '\0'; // Null-terminate the string
+    strsize += 1;
+
+    QFile* file = openFileForWriting(parent);
+    if (file == nullptr) {
+        delete file; // Clean up
+        return false;
+    }
+    
+
+    //QString qstr = QString::fromUtf8(b); // Convert using UTF-8 encoding.
+
+    //size_t len = strlen(b);
+    QByteArray byteArray(b, strsize); // Copies data into QByteArray
+    free(b);
+
+    file->write(byteArray);
+
+    file->close();
+    delete file;
+
+    return true;
+}
+
+
+bool Grid::openFile(QWidget* parent) {
+    QFile* file = openFileForReading(parent);
+    if (file == nullptr) return false;
+
+    QTextStream in(file);
+    QString line = in.readLine(); // Read the first line containing dimensions, etc.
+
+    QStringList dimensions = line.split(' ');
+    if (dimensions.size() != 2) {
+        file->close();
+        return false; // Error handling in case the format is not as expected
+    }
+
+    bool ok1, ok2;
+    int width = dimensions.at(0).toInt(&ok1);
+    int height = dimensions.at(1).toInt(&ok2);
+
+    if (!ok1 || !ok2) {
+        file->close();
+        return false; // Error handling in case conversion fails
+    }
+
+    resizeGrid(width, height);
+    fullResetPath();
+
+
+    // Read the rest of the data byte by byte
+    int x = 0, y = 0;
+    while (y < height) {
+        QChar ch;
+        in >> ch; // Read character by character
+
+        if (ch == '\n') {
+            y++;
+            x = 0;
+            continue;
+        }
+
+        // Assuming '0' character offset for grid values
+        if (x < width) {
+            setCell(x, y, ch.toLatin1() - '0');
+            x++;
+        }
+    }
+
+    file->close();
+    delete file;
+    return true;
+    
 }
 
 void Grid::setCell(int x, int y, int newtype) { // couldn't get this to work as a prototype without errors so the whole function is here now
@@ -85,21 +196,36 @@ void Grid::setCell(int x, int y, int newtype) { // couldn't get this to work as 
     }
 }
 
-
 Cell& Grid::getCell(int x, int y) {
     return cells[y][x];
 }
 
 // resize the Grid by x (row length) and y (column length)
 void Grid::resizeGrid(int x, int y) {
+
+    if (x == _width && y == _height) {
+        return;
+    }
+    
+    // resizing results in dangling pointers so we need to rebuild our nodes. Really kinda unfortunately this is.
+    nodes.clear();
+
     cells.resize(y);  // Resize and initialize
 
     for (int i = 0; i < y; ++i) {
+
         cells[i].resize(x);  // Only resizes if more columns are needed
         for (int j = 0; j < x; ++j) {
             // Update the coordinates of each cell
-            cells[i][j].x = j;
-            cells[i][j].y = i;
+            Cell*item = &cells[i][j];
+
+            item->x = j;
+            item->y = i;
+
+            int type = item->type;
+            if (type == 2 || type == 3) {
+                nodes.push_back(item);
+            }
         }
     }
 
@@ -208,6 +334,9 @@ std::vector<Cell*> Grid::getAdjacentCells(Cell* point) // replace targetx and ta
     int x = point->x;
     int y = point->y;
 
+    int startx = start->x;
+    int starty = start->y;
+
     int targetx = finish->x;
     int targety = finish->y;
 
@@ -230,10 +359,10 @@ std::vector<Cell*> Grid::getAdjacentCells(Cell* point) // replace targetx and ta
             }
 
             // first calculate g
-            float oldf = tempcell->f;
-            float oldg = tempcell->g;
-            float oldh = tempcell->h;
-            float tempg = point->g;
+            double oldf = tempcell->f;
+            double oldg = tempcell->g;
+            double oldh = tempcell->h;
+            double tempg = point->g;
 
             if (i & 1) // odd numbers are corners. LSB being 1 indicates an odd number.
                 tempg += sqrt(2);
@@ -245,9 +374,11 @@ std::vector<Cell*> Grid::getAdjacentCells(Cell* point) // replace targetx and ta
 
             if (oldh < 0)
                 oldh = calculate_h_score(nx, ny, targetx, targety);
+                //double oldd = min_float(calculate_d_score(nx, ny, targetx, targety, startx, starty), oldh/100);
+
                 tempcell->h = oldh;
 
-            float tempf = oldh + tempg;
+            double tempf = oldh + tempg;
 
             if (oldf < 0 || tempf < oldf) {
                 tempcell->f = tempf;
@@ -347,13 +478,13 @@ void Grid::addPath(const QPoint& start, const QPoint& finish, const std::vector<
     
     // check if our path Map has our start as the key
     if (pathMap.contains(start)) {
-        QHash<QPoint, PathInfo*>& innerHash = pathMap[start]; // 
+        QHash<QPoint, PathInfo*>& innerHash = pathMap[start]; //dereference 
         if (innerHash.contains(finish)) {
             return; // already here, cancel
         }
     }
 
-    float cost = path.back()->f;  // Assuming path is non-empty, grab f value of the last item in the vector
+    double cost = path.back()->f;  // Assuming path is non-empty, grab f value of the last item in the vector
     PathInfo* _path = new PathInfo(cost, path);
     std::vector<Cell*> reversedPath = path;
     std::reverse(reversedPath.begin(), reversedPath.end());
@@ -377,12 +508,19 @@ PathInfo* Grid::getPath(const QPoint& start, const QPoint& finish)
     return nullptr;
 }
 
-void Grid::addAllPaths()
+// A better name would be Generate Euclidean Distance Matrix. Calculates all Distances to every node for every node.
+bool Grid::addAllPaths()
 {   
 
     int nodesize = nodes.size();
+
+    if (nodesize < 2) return false;
+
     resizeTSPMap(nodesize);
     clearPathMap();
+    _points.clear();
+    _currentorder.clear();
+
     //pathMap.clear(); // MEMORY LEAK ALERT
     
     // Loop through each element in the vector
@@ -390,20 +528,24 @@ void Grid::addAllPaths()
 
         // Print the starting number followed by a dash
         Cell* temp_start = nodes[start];
+        QPoint startP = QPoint(temp_start->x, temp_start->y);
+
+        _points.push_back(startP);
+        _currentorder.push_back(start);
 
         // Loop to print the remaining numbers after the current start
         for (size_t end = start + 1; end < nodesize; ++end) {
             Cell* temp_end = nodes[end];
 
-            // mutex code just in case we get some desync issues
+            // mutex code for any future multithreading implementation
             // mutex.lock();   // Lock the mutex
             // this can be greatly improved if we memoize the reverse route
             std::vector<Cell*> path = TracePath(temp_start->x, temp_start->y, temp_end->x, temp_end->y);
             // mutex.unlock(); // Unlock the mutex
-            QPoint startP = QPoint(temp_start->x, temp_start->y);
+            
             QPoint endP = QPoint(temp_end->x, temp_end->y);
-
-            float cost = path.back()->f;  // Assuming path is non-empty, grab f value of the last item in the vector
+            
+            double cost = path.back()->f;  // Assuming path is non-empty, grab f value of the last item in the vector
             tspMap[start][end] = cost;
             tspMap[end][start] = cost;
 
@@ -412,23 +554,38 @@ void Grid::addAllPaths()
         }
     }
 
-    return;
+    return true;
 }
 
-std::pair<int, std::vector<int>> Grid::TSPSolve_heldKarp() // this shouldn't be void later, make it return the path.
+std::pair<int, std::vector<Cell*>> Grid::TSPSolve_heldKarp() // this shouldn't be void later, make it return the path.
+{
+    if (!(addAllPaths())) return {0, {}}; // this initializes the TSP Map and the all the paths
+
+    //std::vector<std::vector<double>>* ptrTspMap = &tspMap;  // Pointer to tspMap
+
+    //int n = tspMap.size();
+
+    auto returnvalue = _TSPSolve_heldKarp(tspMap);
+    std::vector<Cell*> finalroute = fixPath(returnvalue.second);
+
+    return { returnvalue.first, finalroute };
+
+}
+
+std::pair<int, std::vector<int>> _TSPSolve_heldKarp(std::vector<std::vector<double>> e_matrix)
 {
     // Held-Karp algorithm is useful because you set predecessors which lets you create a TSP from a specific point.
     // We pick an "arbitrary" point as zero and we rotate it around later.
     // NOT REALLY MY ORIGINAL CODE.
     // Credit to this page: https://compgeek.co.in/held-karp-algorithm-for-tsp/#:~:text=The%20algorithm%20uses%20a%20dynamic,(n%20*%202n).
-    addAllPaths(); // this initializes the TSP Map and the all the paths
-
-    //std::vector<std::vector<float>>* ptrTspMap = &tspMap;  // Pointer to tspMap
-
-    int n = tspMap.size();
 
     // this would not work for more than 32 cities but it's okay because atp the computation is massive.
     // TODO: if n is greater than 32 print ("too many cities for this algorithm")
+
+    int n = e_matrix.size();
+
+    if (n < 2) return { 0, {}};
+
     int totalSubsets = 1 << n; // Bitmask representing all cities visited
 
     // Create a dynamic programming table table where dp[mask][i] is the min cost to visit all cities in 'mask' ending in city 'i'
@@ -445,7 +602,7 @@ std::pair<int, std::vector<int>> Grid::TSPSolve_heldKarp() // this shouldn't be 
                 for (int v = 0; v < n; v++) {
                     if (!(mask & (1 << v))) {
                         int newMask = mask | (1 << v);
-                        double newCost = dp[mask][u] + tspMap[u][v];
+                        double newCost = dp[mask][u] + e_matrix[u][v];
                         if (dp[newMask][v] == -1 || newCost < dp[newMask][v]) {
                             dp[newMask][v] = newCost;   // this is our new minimum cost to this combination of points
                             pred[newMask][v] = u;       // set parent / predecessor
@@ -461,7 +618,7 @@ std::pair<int, std::vector<int>> Grid::TSPSolve_heldKarp() // this shouldn't be 
     std::vector<int> path;
     int last = -1;
     for (int i = 1; i < n; i++) {
-        double cost = dp[totalSubsets - 1][i] + tspMap[i][0];
+        double cost = dp[totalSubsets - 1][i] + e_matrix[i][0];
         if (minCost == -1 || cost < minCost) {
             minCost = cost;
             last = i;
@@ -485,6 +642,84 @@ std::pair<int, std::vector<int>> Grid::TSPSolve_heldKarp() // this shouldn't be 
     // we now have our path in index form, but we still need the actual real path
     // we can't output this until we can print to the console so we keep it as this simple return as to not screw anything up.
 
+    return { minCost, path };
+}
 
-    return {minCost, path};
+// traces the path and makes them traversal type, then, rotates around the origin to make it the start and end point.
+std::vector<Cell*> Grid::fixPath(std::vector<int> tour) // this shouldn't be void later, make it return the path.
+{
+    int toursize = tour.size();
+
+    if (toursize < 3) return {};
+
+    std::vector<Cell*> finalpath;
+    std::vector<Cell*>* nodes = getNodes();
+
+    for (int city : tour) {
+
+        finalpath.push_back((*nodes)[city]);
+
+    }
+
+    for (int i = 0; i < toursize - 1; i++) {
+        QPoint start = QPoint(finalpath[i]->x, finalpath[i]->y);
+        QPoint finish = QPoint(finalpath[i + 1]->x, finalpath[i + 1]->y);
+
+        PathInfo* pathInfo = getPath(start, finish);
+        std::vector<Cell*> path = pathInfo->path;
+
+        for (Cell* c : path) {
+            if (c->type == 1) { // if free
+                c->type = 4; // change to traverse type
+            }
+        }
+    }
+
+    auto it = std::find(finalpath.begin(), finalpath.end(), origin);
+    if ((it != finalpath.begin()) && (it != finalpath.end())) {
+        finalpath.pop_back(); // Remove the last element
+
+        std::rotate(finalpath.begin(), it, finalpath.end());
+
+        finalpath.push_back(origin);
+    }
+
+    return finalpath;
+
+}
+
+std::pair<int, std::vector<Cell*>> Grid::TSPSolve_LK() // this shouldn't be void later, make it return the path.
+{
+    if (!(addAllPaths())) return { 0, {} }; // this initializes the TSP Map and the all the paths
+
+    auto returnvalue = _LK_Route(&_points, &_currentorder, &tspMap);
+    std::vector<Cell*> finalroute = fixPath(returnvalue.second);
+
+    return { returnvalue.first, finalroute };
+}
+
+std::pair<double, std::vector<int>> _LK_Route(std::vector<QPoint>* coords, std::vector<int>* ids, std::vector<std::vector<double>>* E_DistMatrix) {
+    
+    LK lkroute;
+    lkroute.LKMatrix(coords, ids, E_DistMatrix);
+    lkroute.optimizeTour();
+    double distance = lkroute.getCurrentTourDistance(0);
+    std::vector<int> tour = (*lkroute.retrieveTour());
+
+    return { distance, tour };
+}
+
+
+std::pair<int, std::vector<Cell*>> Grid::TSPSolve_Greedy() // this shouldn't be void later, make it return the path.
+{
+    if (!(addAllPaths())) return { 0, {} }; // this initializes the TSP Map and the all the paths
+
+    //std::vector<std::vector<double>>* ptrTspMap = &tspMap;  // Pointer to tspMap
+
+    //int n = tspMap.size();
+
+    auto returnvalue = greedyRoute(&tspMap);
+    std::vector<Cell*> finalroute = fixPath(returnvalue.second);
+
+    return { returnvalue.first, finalroute };
 }
