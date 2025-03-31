@@ -1,13 +1,30 @@
 #include "GUI.h"
+#include <QThread>
+#include "MainThread.h"
 #include <QtWidgets/QApplication>
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     QtWidgetsApplication1 mainWindow;
+
+    ApplicationManager* constManager = new ApplicationManager();
+
     mainWindow.setWindowTitle("Interactive Map Editor");
     mainWindow.resize(1200, 800);
     mainWindow.show();
+    //QtWidgetsApplication1::getInstance()->ptrManager = constManager;
+
+
+    //constManager->handleStartTimer();
+    //TimerControl control;
+    
+    //constManager->main = &mainWindow;
+    //constManager->main->myGrid->stats.running;
+    // 
+    //manager.handleStartTimer();
+    //manager.mainWindow = &mainWindow;
+
     return app.exec();
 }
 
