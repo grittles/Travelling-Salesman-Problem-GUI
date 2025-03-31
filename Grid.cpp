@@ -1,5 +1,6 @@
 // Grid.cpp
 #include "Grid.h"
+#include "GUI.h"
 
 
 // Calculate the perpendicular distance from point C(x3, y3) to the line formed by A(x1, y1) and B(x2, y2)
@@ -97,7 +98,6 @@ bool Grid::saveFile(QWidget* parent) const {
 
     return true;
 }
-
 
 bool Grid::openFile(QWidget* parent) {
     QFile* file = openFileForReading(parent);
@@ -231,6 +231,22 @@ void Grid::resizeGrid(int x, int y) {
 
     _width = x;
     _height = y;
+}
+
+void Grid::resetGrid() {
+    nodes.clear();
+
+    for (int i = 0; i < _height; ++i) {
+        for (int j = 0; j < _width; ++j) {
+            // Update the coordinates of each cell
+            Cell* item = &cells[i][j];
+
+            item->x = j;
+            item->y = i;
+            item->type = 1;
+        }
+
+    }
 }
 
 // resize the Grid by x (row length) and y (column length)
@@ -435,14 +451,11 @@ std::vector<Cell*> Grid::TracePath(int x, int y, int targetx, int targety) // re
     // At the end we reverse it to know what the proper order is.
     std::vector<Cell*> path;
     while (!(A == nullptr)) {
-        //if (A->type == 1) { // if free
-        //    A->type = 4; // change to traverse type ( this is for debug only, remove later)
-        //}
         path.push_back(A);
         A = A->fastestneighbor; // functionally a linked list
     }
 
-    std::reverse(path.begin(), path.end());
+    std::reverse(path.begin(), path.end()); // inefficient, change this later
 
     start = nullptr;
     finish = nullptr;
@@ -541,6 +554,13 @@ bool Grid::addAllPaths()
             // mutex.lock();   // Lock the mutex
             // this can be greatly improved if we memoize the reverse route
             std::vector<Cell*> path = TracePath(temp_start->x, temp_start->y, temp_end->x, temp_end->y);
+
+            if (path.size() == 0) {
+                return false;
+                //tspMap[start][end] = -1;
+                //resetPathingData(); // we're done with this path so reset everything and go again
+                //continue;
+            }
             // mutex.unlock(); // Unlock the mutex
             
             QPoint endP = QPoint(temp_end->x, temp_end->y);
@@ -645,6 +665,39 @@ std::pair<int, std::vector<int>> _TSPSolve_heldKarp(std::vector<std::vector<doub
     return { minCost, path };
 }
 
+std::pair<int, std::vector<int>> _TSPSolve_BruteForce(std::vector<std::vector<double>> e_matrix)
+{
+
+    int n = e_matrix.size();
+
+    if (n < 2) return { 0, {} };
+
+    std::vector<int> cities(n);
+    std::iota(cities.begin(), cities.end(), 0);  // Fill cities with 0, 1, ..., n-1
+
+    std::vector<int> bestTour;
+
+    double minCost;
+    for (int i = 0; i < n; i++) {
+        minCost = e_matrix[cities[i]][cities[(i + 1) % n]];
+    }
+
+    while (std::next_permutation(cities.begin(), cities.end())) {
+        double currentDistance = 0;
+        for (int i = 0; i < n; i++) {
+            currentDistance += e_matrix[cities[i]][cities[(i + 1) % n]];
+        }
+        if (currentDistance < minCost) {
+            minCost = currentDistance;
+            bestTour = cities;
+        }
+    }
+
+    return { minCost, bestTour };
+}
+
+
+
 // traces the path and makes them traversal type, then, rotates around the origin to make it the start and end point.
 std::vector<Cell*> Grid::fixPath(std::vector<int> tour) // this shouldn't be void later, make it return the path.
 {
@@ -698,6 +751,16 @@ std::pair<int, std::vector<Cell*>> Grid::TSPSolve_LK() // this shouldn't be void
     return { returnvalue.first, finalroute };
 }
 
+std::pair<int, std::vector<Cell*>> Grid::TSPSolve_LK2() // this shouldn't be void later, make it return the path.
+{
+    if (!(addAllPaths())) return { 0, {} }; // this initializes the TSP Map and the all the paths
+
+    auto returnvalue = _LK_Route2(&_points, &_currentorder, &tspMap);
+    std::vector<Cell*> finalroute = fixPath(returnvalue.second);
+
+    return { returnvalue.first, finalroute };
+}
+
 std::pair<double, std::vector<int>> _LK_Route(std::vector<QPoint>* coords, std::vector<int>* ids, std::vector<std::vector<double>>* E_DistMatrix) {
     
     LK lkroute;
@@ -706,6 +769,40 @@ std::pair<double, std::vector<int>> _LK_Route(std::vector<QPoint>* coords, std::
     double distance = lkroute.getCurrentTourDistance(0);
     std::vector<int> tour = (*lkroute.retrieveTour());
 
+    return { distance, tour };
+}
+
+std::pair<double, std::vector<int>> _LK_Route2(std::vector<QPoint>* coords, std::vector<int>* ids, std::vector<std::vector<double>>* E_DistMatrix) {
+
+    LK lkroute;
+    lkroute.LKMatrix(coords, ids, E_DistMatrix);
+    lkroute.optimizeTour2();
+    double distance = lkroute.getCurrentTourDistance(0);
+    std::vector<int> tour = (*lkroute.retrieveTour());
+
+    return { distance, tour };
+}
+
+
+std::pair<int, std::vector<Cell*>> Grid::TSPSolve_Genetic() // this shouldn't be void later, make it return the path.
+{
+    // addallpaths returns false if it can't add all paths
+    if (!(addAllPaths())) return { 0, {} }; // this initializes the TSP Map and the all the paths
+
+    auto returnvalue = _Genetic_Route(&_points, &_currentorder, &tspMap);
+
+    std::vector<Cell*> finalroute = fixPath(returnvalue.second);
+
+    return { returnvalue.first, finalroute };
+}
+
+std::pair<double, std::vector<int>> _Genetic_Route(std::vector<QPoint>* coords, std::vector<int>* ids, std::vector<std::vector<double>>* E_DistMatrix) {
+
+    TSPGenetic geneticroute;
+    geneticroute.Create(coords, ids, E_DistMatrix);
+    geneticroute.optimizeTour(1000);
+    double distance = geneticroute.getCurrentTourDistance();
+    std::vector<int> tour = (*geneticroute.retrieveTour());
     return { distance, tour };
 }
 
@@ -722,4 +819,149 @@ std::pair<int, std::vector<Cell*>> Grid::TSPSolve_Greedy() // this shouldn't be 
     std::vector<Cell*> finalroute = fixPath(returnvalue.second);
 
     return { returnvalue.first, finalroute };
+}
+
+void Grid::Solve100() // this shouldn't be void later, make it return the path.
+{
+    int totalPoints = _width * _height;  // Total number of points in the grid
+    std::vector<int> indices(totalPoints);
+    std::iota(indices.begin(), indices.end(), 0);
+
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+
+    // Shuffle the indices
+    std::shuffle(indices.begin(), indices.end(), std::default_random_engine(seed));
+
+    indices.resize(200);
+
+    StatTracker stats;
+    stats.initializeThread();
+
+    int i = 0;
+    for (int index : indices) {
+        int x = index % _width;
+        int y = index / _width;
+
+        setCell(x, y, 2);
+
+        i++;
+
+        if (i > 2) {
+
+            if (!(addAllPaths())) continue; // this initializes the TSP Map and the all the paths
+
+            stats.GlobalTimeStart();
+
+            //_TSPSolve_BruteForce(tspMap);
+
+            _LK_Route2(&_points, &_currentorder, &tspMap);
+
+            //_TSPSolve_heldKarp(tspMap);
+
+            stats.GlobalTimeStop();
+
+            //QString text = myGrid->PrintPath(result.second);
+            //WriteConsole(text);
+            if (stats.GlobalTimeGet() > 300) {
+                stats.StoreGlobalTime(i);
+                break;
+            }
+
+            stats.StoreGlobalTime(i);
+
+
+        }
+    }
+
+    stats.saveFile2(1);
+    stats.quit();
+
+}
+
+
+void Grid::Solve100_Euclidean() // this shouldn't be void later, make it return the path.
+{
+    stats.MemUsage();
+    stats.StoreGlobalMemory(0);
+
+    for (int i = 1; i < 5; i+=1) {
+        resizeGrid(i, i);
+        resetGrid();
+        fullResetPath();
+
+        std::vector<int> indices(i * i);
+
+        std::iota(indices.begin(), indices.end(), 0);
+
+        unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+
+        std::shuffle(indices.begin(), indices.end(), std::default_random_engine(seed));
+
+        indices.resize(100);
+
+        for (int index : indices) {
+            int x = index % i;
+            int y = index / i;
+
+            setCell(x, y, 2);
+        }
+
+        stats.GlobalTimeStart();
+
+        if (!(addAllPaths())) continue; // this initializes the TSP Map and the all the paths
+
+        stats.GlobalTimeStop();
+
+        stats.StoreGlobalTime(i);
+        stats.MemUsage();
+        stats.StoreGlobalMemory(i);
+
+    }
+    
+    stats.saveFile2(1);
+    stats.saveFile2(2);
+    stats.quit();
+
+}
+
+void Grid::Solve100_Mem() // this shouldn't be void later, make it return the path.
+{
+    int totalPoints = _width * _height;  // Total number of points in the grid
+    std::vector<int> indices(totalPoints);
+    std::iota(indices.begin(), indices.end(), 0);
+
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+
+    // Shuffle the indices
+    std::shuffle(indices.begin(), indices.end(), std::default_random_engine(seed));
+
+    indices.resize(100);
+
+    stats.initializeThread();
+
+    int i = 0;
+    for (int index : indices) {
+        int x = index % _width;
+        int y = index / _width;
+
+        setCell(x, y, 2);
+
+        i++;
+
+        if (i > 2) {
+            if (!(addAllPaths())) continue; // this initializes the TSP Map and the all the paths
+
+            QtWidgetsApplication1::getInstance()->startMainTimer(); // start collecting memory every 10 seconds
+
+            _Genetic_Route(&_points, &_currentorder, &tspMap);
+
+            QtWidgetsApplication1::getInstance()->stopMainTimer(); // start collecting memory every 10 seconds
+
+            stats.StoreGlobalMemory(i);
+        }
+    }
+
+    stats.saveFile2(2);
+    stats.quit();
+
 }

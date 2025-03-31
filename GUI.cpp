@@ -14,6 +14,18 @@ void QtWidgetsApplication1::handleDropdownChange(int index)
     WriteConsole(selectedType);
 }
 
+void QtWidgetsApplication1::handleDropdownChangeAlgo(int index)
+{
+
+    selectedAlgorithm = index;
+
+    //int index = dropdown_Algorithm->currentIndex();
+    QString text = dropdown_Algorithm->currentText();
+
+    QString selectedType = QString("Selected Algorithm: %1").arg(text);
+    WriteConsole(selectedType);
+}
+
 int QtWidgetsApplication1::getType()
 {
     return selectedDropType;
@@ -28,6 +40,20 @@ void QtWidgetsApplication1::saveToFile()
     myGrid->saveFile(_parent);
 }
 
+void QtWidgetsApplication1::startMainTimer()
+{
+    startTimer();
+    //ptrManager->isRunning = true;
+}
+
+void QtWidgetsApplication1::stopMainTimer()
+{
+    stopTimer();
+    //ptrManager->isRunning = false;
+}
+
+
+
 void QtWidgetsApplication1::openFromFile()
 {
     QString word = QString("Opening File");
@@ -36,6 +62,43 @@ void QtWidgetsApplication1::openFromFile()
     myGrid->openFile(_parent);
 
     syncGrid();
+}
+
+void QtWidgetsApplication1::randomBlock()
+{
+    QString word = QString("Placing random block...");
+    WriteConsole(word);
+
+    mapView->PlaceRandomBlock(2);
+}
+
+void QtWidgetsApplication1::cpumemStats()
+{
+    QString word = QString("Gathering Other Statistics...");
+    WriteConsole(word);
+
+    mapView->resetCanvas(sceneWidth, sceneHeight, bSize);
+    syncCanvas();
+
+    myGrid->Solve100_Euclidean();
+
+
+    mapView->resetCanvas(sceneWidth, sceneHeight, bSize);
+
+
+}
+
+void QtWidgetsApplication1::timeStats()
+{
+    QString word = QString("Gathering Time Statistics...");
+    WriteConsole(word);
+
+    mapView->resetCanvas(sceneWidth, sceneHeight, bSize);
+    syncCanvas();
+    
+    myGrid->Solve100();
+
+    mapView->resetCanvas(sceneWidth, sceneHeight, bSize);
 }
 
 void QtWidgetsApplication1::ResizeCanvas(int gridToCanvas)
@@ -97,18 +160,48 @@ void QtWidgetsApplication1::printGrid()
 void QtWidgetsApplication1::tracePath()
 {
     syncCanvas();
-    // if I were to redo this in C rather than C++ I'd probably trace my path as a linked list
-    // I planned on doing the GUI in C++ and doing the pathing and algorithms in C. Kinda off
-    // my original plan at this point.
 
     //QString text = myGrid->PrintPath(path);
     //WriteConsole(text);
 
+    //dropdown_Algorithm->addItem("Greedy Algorithm"); // type 0
+    //dropdown_Algorithm->addItem("2-opt Brute Force"); // type 1
+    //dropdown_Algorithm->addItem("Brute Force Held-Karp"); // type 2
+    //dropdown_Algorithm->addItem("Genetic Algorithm"); // type 3
+    //dropdown_Algorithm->addItem("Hacky LKH (not accurate)"); // type 4
+    std::pair<int, std::vector<Cell*>> result;
+
     auto start = std::chrono::high_resolution_clock::now();
-    auto result = myGrid->TSPSolve_heldKarp();
-    int distance = result.first;
+    switch (selectedAlgorithm) {
+        case 0:
+            result = myGrid->TSPSolve_Greedy();
+            break;
+
+        case 1:
+            result = myGrid->TSPSolve_LK();
+            break;
+
+        case 2:
+            result = myGrid->TSPSolve_heldKarp();
+            break;
+
+        case 3:
+            result = myGrid->TSPSolve_Genetic();
+            break;
+
+        case 4:
+            result = myGrid->TSPSolve_LK2();
+            break;
+
+        default:
+            QString text = QString("Something is wrong");
+            WriteConsole(text);
+            break;
+
+    }
 
     auto end = std::chrono::high_resolution_clock::now();
+    int distance = result.first;
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     QString text;
@@ -127,79 +220,6 @@ void QtWidgetsApplication1::tracePath()
     WriteConsole(text);
 
     text = QString("Total Distance: %1").arg(distance);
-    WriteConsole(text);
-
-    syncGrid();
-}
-
-void QtWidgetsApplication1::traceAllPaths()
-{
-    syncCanvas();
-    // if I were to redo this in C rather than C++ I'd probably trace my path as a linked list
-    // I planned on doing the GUI in C++ and doing the pathing and algorithms in C. Kinda off
-    // my original plan at this point.
-    
-    //QString text = myGrid->PrintPath(path);
-    //WriteConsole(text);
-
-    auto start = std::chrono::high_resolution_clock::now();
-    auto result = myGrid->TSPSolve_LK();
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    QString text;
-
-    text = QString("Time taken to Execute: %1 ms").arg(duration);
-    WriteConsole(text);
-
-    auto c = myGrid->origin;
-
-    if (c != nullptr) {
-        text = QString("origin: [%1, %2]").arg(c->x).arg(c->y);
-        WriteConsole(text);
-    }
-
-    text = myGrid->PrintPath(result.second);
-    WriteConsole(text);
-
-    text = QString("Total Distance: %1").arg(result.first);
-    WriteConsole(text);
-
-    syncGrid();
-}
-
-
-void QtWidgetsApplication1::traceGreedyPath()
-{
-    syncCanvas();
-    // if I were to redo this in C rather than C++ I'd probably trace my path as a linked list
-    // I planned on doing the GUI in C++ and doing the pathing and algorithms in C. Kinda off
-    // my original plan at this point.
-
-    //QString text = myGrid->PrintPath(path);
-    //WriteConsole(text);
-
-    auto start = std::chrono::high_resolution_clock::now();
-    auto result = myGrid->TSPSolve_Greedy();
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    QString text;
-
-    text = QString("Time taken to Execute: %1 ms").arg(duration);
-    WriteConsole(text);
-
-    auto c = myGrid->origin;
-
-    if (c != nullptr) {
-        text = QString("origin: [%1, %2]").arg(c->x).arg(c->y);
-        WriteConsole(text);
-    }
-
-    text = myGrid->PrintPath(result.second);
-    WriteConsole(text);
-
-    text = QString("Total Distance: %1").arg(result.first);
     WriteConsole(text);
 
     syncGrid();
@@ -259,14 +279,24 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     rightPanel = new QWidget(this);
     rightLayout = new QVBoxLayout(rightPanel);
 
-    dropdown = new QComboBox(this);
-    dropdown->addItem("Obstacle Block"); // type 0
-    dropdown->addItem("Free Block"); // type 1
-    dropdown->addItem("Node Block"); // type 2
-    dropdown->addItem("Origin Block"); // type 3
-    //dropdown->addItem("Path Block (Not used)"); // type 4
+    dropdown_BlockType = new QComboBox(this);
+    dropdown_BlockType->addItem("Obstacle Block"); // type 0
+    dropdown_BlockType->addItem("Free Block"); // type 1
+    dropdown_BlockType->addItem("Node Block"); // type 2
+    dropdown_BlockType->addItem("Origin Block"); // type 3
+    //dropdown_BlockType->addItem("Path Block (Not used)"); // type 4
     
-    rightLayout->addWidget(dropdown);
+    rightLayout->addWidget(dropdown_BlockType);
+
+    dropdown_Algorithm = new QComboBox(this);
+    dropdown_Algorithm->addItem("Greedy Algorithm"); // type 0
+    dropdown_Algorithm->addItem("2-opt Brute Force"); // type 1
+    dropdown_Algorithm->addItem("Brute Force Held-Karp"); // type 2
+    dropdown_Algorithm->addItem("Genetic Algorithm"); // type 3
+    dropdown_Algorithm->addItem("Hacky LKH (not accurate)"); // type 4
+    
+    
+    rightLayout->addWidget(dropdown_Algorithm);
 
     resizeButton = new QPushButton("Resize Grid");
     rightLayout->addWidget(resizeButton);
@@ -282,23 +312,11 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     resetButton = new QPushButton("Reset Canvas");
     rightLayout->addWidget(resetButton);
 
-    syncGridButton = new QPushButton("Sync Grid to Canvas (will take a while)");
-    rightLayout->addWidget(syncGridButton);
+    //printGridButton = new QPushButton("Print Grid");
+    //rightLayout->addWidget(printGridButton);
 
-    syncCanvasButton = new QPushButton("Sync Canvas to Grid (will take a while)");
-    rightLayout->addWidget(syncCanvasButton);
-
-    printGridButton = new QPushButton("Print Grid");
-    rightLayout->addWidget(printGridButton);
-
-    tracePathButton = new QPushButton("Trace Path (Brute Force Solve)");
+    tracePathButton = new QPushButton("Trace Path");
     rightLayout->addWidget(tracePathButton);
-
-    traceAllPathsButton = new QPushButton("Trace All Paths (LK)");
-    rightLayout->addWidget(traceAllPathsButton);
-
-    traceGreedyPathButton = new QPushButton("Trace Greedy Path");
-    rightLayout->addWidget(traceGreedyPathButton);
 
     saveButton = new QPushButton("Save Grid Data");
     rightLayout->addWidget(saveButton);
@@ -306,6 +324,14 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     openButton = new QPushButton("Open Grid Data");
     rightLayout->addWidget(openButton);
 
+    randomBlockButton = new QPushButton("Generate Random Block");
+    rightLayout->addWidget(randomBlockButton);
+
+    statsButton = new QPushButton("Gather Mem Stats (100 random nodes)");
+    rightLayout->addWidget(statsButton);
+
+    statsButton2 = new QPushButton("Gather Time Stats (100 random nodes)");
+    rightLayout->addWidget(statsButton2);
 
     topSplitter->addWidget(rightPanel);
 
@@ -319,25 +345,34 @@ QtWidgetsApplication1::QtWidgetsApplication1(QWidget* parent)
     setCentralWidget(mainSplitter);
 
     // Signals and Slots
-    connect(dropdown, &QComboBox::currentIndexChanged, this, &QtWidgetsApplication1::handleDropdownChange);
+    connect(dropdown_BlockType, &QComboBox::currentIndexChanged, this, &QtWidgetsApplication1::handleDropdownChange);
+    connect(dropdown_Algorithm, &QComboBox::currentIndexChanged, this, &QtWidgetsApplication1::handleDropdownChangeAlgo);
 
     connect(resizeButton, &QPushButton::clicked, this, &QtWidgetsApplication1::ResizeCanvas);
     connect(resetButton, &QPushButton::clicked, this, &QtWidgetsApplication1::InitCanvas);
-    connect(syncGridButton, &QPushButton::clicked, this, &QtWidgetsApplication1::syncGrid);
-    connect(syncCanvasButton, &QPushButton::clicked, this, &QtWidgetsApplication1::syncCanvas);
-    connect(printGridButton, &QPushButton::clicked, this, &QtWidgetsApplication1::printGrid);
+    //connect(syncGridButton, &QPushButton::clicked, this, &QtWidgetsApplication1::syncGrid);
+    //connect(syncCanvasButton, &QPushButton::clicked, this, &QtWidgetsApplication1::syncCanvas);
+    //connect(printGridButton, &QPushButton::clicked, this, &QtWidgetsApplication1::printGrid);
     connect(tracePathButton, &QPushButton::clicked, this, &QtWidgetsApplication1::tracePath);
-    connect(traceGreedyPathButton, &QPushButton::clicked, this, &QtWidgetsApplication1::traceGreedyPath);
-    connect(traceAllPathsButton, &QPushButton::clicked, this, &QtWidgetsApplication1::traceAllPaths);
+    //connect(traceGreedyPathButton, &QPushButton::clicked, this, &QtWidgetsApplication1::traceGreedyPath);
+    //connect(traceAllPathsButton, &QPushButton::clicked, this, &QtWidgetsApplication1::traceAllPaths);
+    //connect(traceGeneticButton, &QPushButton::clicked, this, &QtWidgetsApplication1::traceTSPPath);
 
     connect(saveButton, &QPushButton::clicked, this, &QtWidgetsApplication1::saveToFile);
     connect(openButton, &QPushButton::clicked, this, &QtWidgetsApplication1::openFromFile);
+
+    connect(randomBlockButton, &QPushButton::clicked, this, &QtWidgetsApplication1::randomBlock);
+
+    connect(statsButton, &QPushButton::clicked, this, &QtWidgetsApplication1::cpumemStats);
+    connect(statsButton2, &QPushButton::clicked, this, &QtWidgetsApplication1::timeStats);
 
     // place initial blocks
     InitCanvas();
 
     myGrid = new Grid(sceneWidth/10, sceneHeight/10);
+    //myGrid->getParent(this);
     mapView->getGrid();
+    startTimer();
 
     //myGrid->setCell(2, 2, 0);
     //Qstring gridoutput = myGrid->printGrid();

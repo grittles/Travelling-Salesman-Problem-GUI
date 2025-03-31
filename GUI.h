@@ -19,6 +19,8 @@
 #include <QLineEdit>
 
 #include <chrono>  // Include the chrono library
+#include "Statistics.h"
+#include "MainThread.h"
 
 class QtWidgetsApplication1 : public QMainWindow
 {
@@ -38,6 +40,8 @@ public:
     Grid* myGrid = nullptr;
     QWidget* _parent = nullptr;
 
+   //ApplicationManager* ptrManager; // Correct
+
 
 private:
     Ui::QtWidgetsApplication1Class ui;
@@ -54,17 +58,23 @@ private:
     QVBoxLayout* mainLayout;
     QHBoxLayout* mainSplitLayout;
 
-    QComboBox* dropdown;
+    QComboBox* dropdown_BlockType;
+    QComboBox* dropdown_Algorithm;
+
     QPushButton* saveButton;
     QPushButton* openButton;
+    QPushButton* statsButton;
+    QPushButton* statsButton2;
     QPushButton* resizeButton;
     QPushButton* resetButton;
-    QPushButton* syncGridButton;
-    QPushButton* syncCanvasButton;
-    QPushButton* printGridButton;
+    //QPushButton* syncGridButton;
+    //QPushButton* syncCanvasButton;
+    //QPushButton* printGridButton;
     QPushButton* tracePathButton;
-    QPushButton* traceAllPathsButton;
-    QPushButton* traceGreedyPathButton;
+    //QPushButton* traceAllPathsButton;
+    //QPushButton* traceGreedyPathButton;
+
+    QPushButton* randomBlockButton;
 
     QLineEdit* minSizeEdit;
     QLineEdit* maxSizeEdit;
@@ -77,9 +87,12 @@ private:
     // Static instance pointer
     static QtWidgetsApplication1* instance;
     int selectedDropType = 0;
+    int selectedAlgorithm = 0;
 
 signals:
     void requestCanvasInitialization(int width, int height, int blockSize);
+    void startTimer();
+    void stopTimer();
 
 public slots:
     void WriteConsole(QString string);
@@ -87,8 +100,12 @@ public slots:
     void ResizeCanvas(int gridToCanvas);
     void ResizeCanvasArgs(int minsize, int maxsize, int gridToCanvas);
 
+    void startMainTimer();
+    void stopMainTimer();
+
 private slots:
     void handleDropdownChange(int index);
+    void handleDropdownChangeAlgo(int index);
 
     void saveToFile();
     void openFromFile();
@@ -97,7 +114,9 @@ private slots:
     void syncCanvas();
     void printGrid();
     void tracePath();
-    void traceAllPaths();
-    void traceGreedyPath();
+
+    void randomBlock();
+    void cpumemStats();
+    void timeStats();
     
 };

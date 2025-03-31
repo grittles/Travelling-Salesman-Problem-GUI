@@ -9,8 +9,11 @@
 #include <QtCore/QHash.h>
 #include <queue>
 #include "LKMatrix.h"
+#include "TSP_Genetic.h"
 #include "FileHandler.h"
 #include <QFile>
+#include <random>
+#include "Statistics.h"
 
 struct Cell {
     uint8_t type = 1;               // Default initialized to 1
@@ -82,8 +85,11 @@ struct PathInfo {
 
 double calculate_h_score(const int x1, const int y1, const int x2, const int y2);
 std::pair<int, std::vector<int>> _TSPSolve_heldKarp(std::vector<std::vector<double>> e_matrix);
+std::pair<int, std::vector<int>> _TSPSolve_BruteForce(std::vector<std::vector<double>> e_matrix);
 
 std::pair<double, std::vector<int>> _LK_Route(std::vector<QPoint>* coords, std::vector<int>* ids, std::vector<std::vector<double>>* E_DistMatrix);
+std::pair<double, std::vector<int>> _LK_Route2(std::vector<QPoint>* coords, std::vector<int>* ids, std::vector<std::vector<double>>* E_DistMatrix);
+std::pair<double, std::vector<int>> _Genetic_Route(std::vector<QPoint>* coords, std::vector<int>* ids, std::vector<std::vector<double>>* E_DistMatrix);
 
 
 class Grid {
@@ -108,6 +114,10 @@ private:
     }; // Order: N(0), NE(1), E(2), SE(3), S(4), SW(5), W(6), NW(7)
 
 public:
+
+    void Solve100();
+    void Solve100_Mem();
+    void Solve100_Euclidean();
 
     std::vector<Cell*>* getNodes() {
         return &nodes;
@@ -159,6 +169,9 @@ public:
     Cell* start = nullptr;
     Cell* finish = nullptr;
 
+    StatTracker stats;
+
+
     // Declarations only; definitions will be in Grid.cpp
     QString printGrid() const;
     QString PrintPath(std::vector<Cell*> cells) const;
@@ -179,7 +192,14 @@ public:
 
     std::pair<int, std::vector<Cell*>> TSPSolve_heldKarp();
     std::pair<int, std::vector<Cell*>> TSPSolve_LK();
+
+    std::pair<int, std::vector<Cell*>> TSPSolve_LK2();
+
+    std::pair<int, std::vector<Cell*>> TSPSolve_Genetic();
+
     std::pair<int, std::vector<Cell*>> TSPSolve_Greedy();
+
+    
 
     std::vector<Cell*> fixPath(std::vector<int> tour);
 
@@ -187,6 +207,8 @@ public:
 
 public slots:
     void resizeGrid(int x, int y);
+
+    void resetGrid();
 
     void resizeTSPMap(int x);
 
