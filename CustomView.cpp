@@ -88,6 +88,22 @@ void CustomView::PlaceBlock(int x, int y, int type) {
     }
 }
 
+void CustomView::PlaceRandomBlock(int type) {
+    int width = gridPointer->getWidth();
+    int height = gridPointer->getHeight();
+
+    QRectF sceneRect = this->sceneRect(); // Get the scene rectangle
+
+    int x = roundToNearestMultiple(random_int(sceneRect.x() + _blockSize, sceneRect.right()), _blockSize) - _blockSize;
+    int y = roundToNearestMultiple(random_int(sceneRect.y() + _blockSize, sceneRect.bottom()), _blockSize) - _blockSize;
+    
+    //for (int x = sceneRect.x(); x < sceneRect.right(); x += _blockSize) {  // Assuming each "pixel" is a 10x10 square
+    //    for (int y = sceneRect.y(); y < sceneRect.bottom(); y += _blockSize) {
+
+    PlaceBlock(x,y,type);
+
+}
+
 // Remove item by its pointer
 // used by the program while resizing the canvas
 void CustomView::removeItem(QGraphicsItem* item) {

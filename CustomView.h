@@ -52,6 +52,8 @@ public slots:
     void syncCanvasToGrid(); // is this really necessary?
     void syncGridToCanvas();
 
+    void PlaceRandomBlock(int type);
+
 signals:
 
     void a_syncCanvasToGrid();

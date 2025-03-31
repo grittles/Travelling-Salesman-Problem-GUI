@@ -369,3 +369,5 @@ FodyWeavers.xsd
 /StdoutConsoleRedirect.h
 /QtWidgetsApplication1.vcxproj
 /QtWidgetsApplication1.vcxproj.filters
+/Quadtree.cpp
+/QuadTree.h
