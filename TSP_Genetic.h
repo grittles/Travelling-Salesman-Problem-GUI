@@ -7,6 +7,10 @@
 #include <QtCore/QPoint.h>
 #include "randomnumgen.h"
 
+// THIS GENETIC ALGORITHM IS ENTIRELY PORTED FROM JAVASCRIPT
+// THE ORIGINAL AUTHOR IS: Chaoyu Yang
+// https://github.com/parano/GeneticAlgorithm-TSP
+
 
 class TSPGenetic {
 public:
