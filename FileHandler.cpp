@@ -12,6 +12,7 @@
 //}
 
 // opens a file for reading using a dialogue box
+// this just returns the pointer, we still have close the file and delete later.
 QFile* openFileForReading(QWidget* parent) {
     QString fileName = QFileDialog::getOpenFileName(parent,
         QObject::tr("Open File"),
@@ -28,11 +29,13 @@ QFile* openFileForReading(QWidget* parent) {
 }
 
 // Specific function for opening a file for writing
+// this just returns the pointer, we still have close the file and delete later.
 QFile* openFileForWriting(QWidget* parent) {
     QString fileName = QFileDialog::getSaveFileName(parent,
         QObject::tr("Save File"),
         QCoreApplication::applicationDirPath(),
-        QObject::tr("Text Files (*.txt);;All Files (*)"));
+        QObject::tr("Text Files (*.txt);;CSV Files (*.csv);;All Files (*)")
+        );
 
     if (!fileName.isEmpty()) {
         QFile* file = new QFile(fileName);
