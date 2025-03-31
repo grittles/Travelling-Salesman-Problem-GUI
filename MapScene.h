@@ -5,6 +5,7 @@
 #include <QGraphicsSceneMouseEvent>
 #include "CustomRectItem.h"
 
+// i don't actually think I ended up using this for anything
 class MapScene : public QGraphicsScene
 {
     Q_OBJECT
