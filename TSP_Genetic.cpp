@@ -1,12 +1,9 @@
 #include "TSP_Genetic.h"
 
-<<<<<<< HEAD
 // THIS GENETIC ALGORITHM IS ENTIRELY PORTED FROM JAVASCRIPT
 // THE ORIGINAL AUTHOR IS: Chaoyu Yang
 // https://github.com/parano/GeneticAlgorithm-TSP
 
-=======
->>>>>>> 81637397ada2acb512581e3c66c2e3004ee94520
 void TSPGenetic::Create(std::vector<QPoint>* coords, std::vector<int>* ids, std::vector<std::vector<double>>* E_DistMatrix)
 {
     _coords = coords; // now we have our coordinates list, this should be ordered the same as our distance matrix
