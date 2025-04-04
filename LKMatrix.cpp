@@ -1,5 +1,5 @@
 #include "LKMatrix.h"
-#include "Quadtree.h"
+//#include "Quadtree.h"
 #include <cmath>
 #include <set>
 #include <iostream>
@@ -25,7 +25,7 @@ void LK::LKMatrix(std::vector<QPoint>* coords, std::vector<int>* ids, std::vecto
 
     srand(time(NULL)); // set random seed
 
-    QuadtreeNode* root = new QuadtreeNode(0, 0, 50, 50);  // Define a root node covering a certain area
+    //QuadtreeNode* root = new QuadtreeNode(0, 0, 50, 50);  // Define a root node covering a certain area
 
 }
 
